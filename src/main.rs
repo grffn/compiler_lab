@@ -1,7 +1,7 @@
 extern crate compilers;
 extern crate argparse;
 use argparse::{ArgumentParser, Store, StoreTrue, StoreFalse};
-use compilers::lexer::Lexer;
+use compilers::lexer::{Lexer, Token};
 
 fn main() {
     let mut input = String::new();
@@ -28,7 +28,16 @@ fn main() {
     } else {
         let lexer = Lexer::new(input.chars());
         for token in lexer {
-            println!("{:?}", token);            
+            match token {
+                Token::Error{pos, message} => {
+                    println!("Error {} at position {}", message, pos);
+                    break;
+                }
+                _ => {
+                    println!("{:?}", token);
+                }
+            }
+
         }
     }
 }

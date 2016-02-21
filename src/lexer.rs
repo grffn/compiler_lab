@@ -36,12 +36,15 @@ impl<I: Iterator<Item = char>> Lexer<I> {
             token.push('-');
             self.input.next();
         }
-        loop  {
+        loop {
             let symbol = match self.input.peek() {
                 None => None,
                 Some(ch) => {
-                    if *ch >= '0' && *ch <= '9' {Some(*ch)}
-                    else {None}
+                    if *ch >= '0' && *ch <= '9' {
+                        Some(*ch)
+                    } else {
+                        None
+                    }
                 }
             };
             match symbol {
@@ -72,7 +75,9 @@ impl<I: Iterator<Item = char>> Lexer<I> {
                 }
             };
             match symbol {
-                None => {break;}
+                None => {
+                    break;
+                }
                 Some(ch) => {
                     self.width += 1;
                     token.push(ch);
@@ -89,9 +94,11 @@ impl<I: Iterator<Item = char>> Lexer<I> {
 impl<I: Iterator<Item = char>> Iterator for Lexer<I> {
     type Item = Token;
     fn next(&mut self) -> Option<Token> {
-        let mut current_symbol = '\0';
+        let mut current_symbol;
         if let Some(s) = self.input.peek() {
             current_symbol = *s;
+        } else {
+            return None;
         }
         while current_symbol.is_whitespace() {
             self.pos += 1;
@@ -111,7 +118,12 @@ impl<I: Iterator<Item = char>> Iterator for Lexer<I> {
                 self.pos += 1;
                 Some(Token::RightParen)
             }
-            '-' | '0'...'9' => self.lex_decimal(),
+            '+' | '-' | '/' | '*' => {
+                self.input.next();
+                self.pos += 1;
+                Some(Token::Operator(current_symbol.to_string()))
+            }
+            '0'...'9' => self.lex_decimal(),
             ':' => {
                 self.input.next();
                 if let Some(&'=') = self.input.peek() {
