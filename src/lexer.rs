@@ -1,5 +1,6 @@
 use std::iter::{Peekable, Iterator};
 
+#[derive(Debug)]
 pub enum Token {
     Ident(String),
     Decimal(String),
@@ -20,7 +21,7 @@ pub struct Lexer<I: Iterator> {
 }
 
 impl<I: Iterator<Item = char>> Lexer<I> {
-    fn new(input: I) -> Lexer<I> {
+    pub fn new(input: I) -> Lexer<I> {
         Lexer {
             input: input.peekable(),
             pos: 0,
