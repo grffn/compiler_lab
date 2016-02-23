@@ -7,11 +7,19 @@ pub enum Token {
     LeftParen,
     RightParen,
     Assign,
-    Operator(String),
+    Operator(Op),
     Error {
         pos: i32,
         message: String,
     },
+}
+
+#[derive(Debug)]
+pub enum Op{
+    Plus,
+    Minus,
+    Mult,
+    Div
 }
 
 pub struct Lexer<I: Iterator> {
@@ -118,10 +126,25 @@ impl<I: Iterator<Item = char>> Iterator for Lexer<I> {
                 self.pos += 1;
                 Some(Token::RightParen)
             }
-            '+' | '-' | '/' | '*' => {
+            '+' => {
                 self.input.next();
                 self.pos += 1;
-                Some(Token::Operator(current_symbol.to_string()))
+                Some(Token::Operator(Op::Plus))
+            }
+            '-' => {
+                self.input.next();
+                self.pos += 1;
+                Some(Token::Operator(Op::Minus))
+            }
+            '*' => {
+                self.input.next();
+                self.pos += 1;
+                Some(Token::Operator(Op::Mult))
+            }
+            '/' => {
+                self.input.next();
+                self.pos += 1;
+                Some(Token::Operator(Op::Div))
             }
             '0'...'9' => self.lex_decimal(),
             ':' => {
