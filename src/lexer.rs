@@ -15,17 +15,18 @@ pub enum Token {
 }
 
 #[derive(Debug)]
-pub enum Op{
+pub enum Op {
     Plus,
     Minus,
     Mult,
-    Div
+    Div,
 }
 
 pub struct Lexer<I: Iterator> {
     pos: i32,
     width: i32,
     input: Peekable<I>,
+    operator_expected: bool,
 }
 
 impl<I: Iterator<Item = char>> Lexer<I> {
@@ -34,6 +35,7 @@ impl<I: Iterator<Item = char>> Lexer<I> {
             input: input.peekable(),
             pos: 0,
             width: 0,
+            operator_expected: false,
         }
     }
 
@@ -66,6 +68,7 @@ impl<I: Iterator<Item = char>> Lexer<I> {
         }
         self.pos += self.width;
         self.width = 0;
+        self.operator_expected = true;
         Some(Token::Decimal(token))
     }
 
@@ -95,6 +98,7 @@ impl<I: Iterator<Item = char>> Lexer<I> {
         }
         self.pos += self.width;
         self.width = 0;
+        self.operator_expected = true;
         Some(Token::Ident(token))
     }
 }
@@ -119,34 +123,40 @@ impl<I: Iterator<Item = char>> Iterator for Lexer<I> {
             '(' => {
                 self.input.next();
                 self.pos += 1;
+                self.operator_expected = false;
                 Some(Token::LeftParen)
             }
             ')' => {
                 self.input.next();
                 self.pos += 1;
+                self.operator_expected = true;
                 Some(Token::RightParen)
             }
             '+' => {
                 self.input.next();
                 self.pos += 1;
+                self.operator_expected = false;
                 Some(Token::Operator(Op::Plus))
             }
-            '-' => {
+            x if x == '-' && self.operator_expected => {
                 self.input.next();
                 self.pos += 1;
+                self.operator_expected = false;
                 Some(Token::Operator(Op::Minus))
             }
             '*' => {
                 self.input.next();
                 self.pos += 1;
+                self.operator_expected = false;
                 Some(Token::Operator(Op::Mult))
             }
             '/' => {
                 self.input.next();
                 self.pos += 1;
+                self.operator_expected = false;
                 Some(Token::Operator(Op::Div))
             }
-            '0'...'9' => self.lex_decimal(),
+            '-' | '0'...'9' => self.lex_decimal(),
             ':' => {
                 self.input.next();
                 if let Some(&'=') = self.input.peek() {
