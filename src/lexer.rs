@@ -1,6 +1,6 @@
 use std::iter::{Peekable, Iterator};
 
-#[derive(Debug)]
+#[derive(Debug,PartialEq, Eq)]
 pub enum Token {
     Ident(String),
     Decimal(String),
@@ -15,7 +15,7 @@ pub enum Token {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug,PartialEq, Eq)]
 pub enum Op {
     Plus,
     Minus,
@@ -81,7 +81,7 @@ impl<I: Iterator<Item = char>> Lexer<I> {
             self.accept_run(&is_digit);
         }
         let mut is_exp = false;
-        if self.accept(|ch| ch == 'e' || ch == 'E'){
+        if self.accept(|ch| ch == 'e' || ch == 'E') {
             self.accept_run(&is_digit);
             is_exp = true;
         }
@@ -97,9 +97,7 @@ impl<I: Iterator<Item = char>> Lexer<I> {
     }
 
     fn lex_ident(&mut self) -> Option<Token> {
-        self.accept_run(|ch| {
-            ch.is_alphabetic() || (ch >= '0' && ch <= '9') || ch == '_'
-        });
+        self.accept_run(|ch| ch.is_alphabetic() || (ch >= '0' && ch <= '9') || ch == '_');
         self.pos += self.width;
         self.width = 0;
         self.operator_expected = true;
@@ -183,6 +181,29 @@ impl<I: Iterator<Item = char>> Iterator for Lexer<I> {
                 })
             }
 
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lexer::Token::*;
+
+    struct TestCase<'a>(&'a str, Token);
+
+    #[test]
+    fn lex_number() {
+
+        let tests = vec![TestCase("20", Decimal("20".to_string())),
+TestCase("-20", Decimal("-20".to_string())),
+TestCase("20.0", Decimal("20.0".to_string())),
+TestCase("0.5E10", Exp("0.5E10".to_string())),
+TestCase("5E2", Exp("5E2".to_string())),
+];
+        for test_case in tests.iter() {
+            let mut lexer = Lexer::new(test_case.0.chars());
+            assert_eq!(lexer.next().expect(""), test_case.1);
         }
     }
 }
