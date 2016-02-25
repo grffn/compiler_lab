@@ -4,6 +4,7 @@ use std::iter::{Peekable, Iterator};
 pub enum Token {
     Ident(String),
     Decimal(String),
+    Exp(String),
     LeftParen,
     RightParen,
     Assign,
@@ -27,6 +28,7 @@ pub struct Lexer<I: Iterator> {
     width: i32,
     input: Peekable<I>,
     operator_expected: bool,
+    buffer: String,
 }
 
 impl<I: Iterator<Item = char>> Lexer<I> {
@@ -36,70 +38,72 @@ impl<I: Iterator<Item = char>> Lexer<I> {
             pos: 0,
             width: 0,
             operator_expected: false,
+            buffer: String::new(),
+        }
+    }
+
+    fn accept<F>(&mut self, f: F) -> bool
+        where F: Fn(char) -> bool
+    {
+        match self.input.peek() {
+            Some(&ch) => {
+                if !f(ch) {
+                    return false;
+                }
+                self.buffer.push(ch);
+                self.width += 1;
+                self.input.next();
+                true
+            }
+            None => false,
+        }
+
+    }
+
+    fn accept_run<F>(&mut self, f: F)
+        where F: Fn(char) -> bool
+    {
+        while let Some(&ch) = self.input.peek() {
+            if !f(ch) {
+                break;
+            }
+            self.buffer.push(ch);
+            self.width += 1;
+            self.input.next();
         }
     }
 
     fn lex_decimal(&mut self) -> Option<Token> {
-        let mut token = String::new();
-        if let Some(&'-') = self.input.peek() {
-            self.width += 1;
-            token.push('-');
-            self.input.next();
+        self.accept(|ch| ch == '-');
+        let is_digit = |ch| ch >= '0' && ch <= '9';
+        self.accept_run(&is_digit);
+        if self.accept(|ch| ch == '.') {
+            self.accept_run(&is_digit);
         }
-        loop {
-            let symbol = match self.input.peek() {
-                None => None,
-                Some(ch) => {
-                    if *ch >= '0' && *ch <= '9' {
-                        Some(*ch)
-                    } else {
-                        None
-                    }
-                }
-            };
-            match symbol {
-                None => break,
-                Some(ch) => {
-                    self.width += 1;
-                    token.push(ch);
-                    self.input.next();
-                }
-            }
+        let mut is_exp = false;
+        if self.accept(|ch| ch == 'e' || ch == 'E'){
+            self.accept_run(&is_digit);
+            is_exp = true;
         }
         self.pos += self.width;
         self.width = 0;
         self.operator_expected = true;
-        Some(Token::Decimal(token))
+        if is_exp {
+            Some(Token::Exp(self.buffer.clone()))
+        } else {
+            Some(Token::Decimal(self.buffer.clone()))
+        }
+
     }
 
     fn lex_ident(&mut self) -> Option<Token> {
-        let mut token = String::new();
-        loop {
-            let symbol = match self.input.peek() {
-                None => None,
-                Some(ch) => {
-                    if ch.is_alphabetic() || (*ch >= '0' && *ch <= '9') || *ch == '_' {
-                        Some(*ch)
-                    } else {
-                        None
-                    }
-                }
-            };
-            match symbol {
-                None => {
-                    break;
-                }
-                Some(ch) => {
-                    self.width += 1;
-                    token.push(ch);
-                    self.input.next();
-                }
-            }
-        }
+        self.accept_run(|ch| {
+            ch.is_alphabetic() || (ch >= '0' && ch <= '9') || ch == '_'
+        });
         self.pos += self.width;
         self.width = 0;
         self.operator_expected = true;
-        Some(Token::Ident(token))
+        Some(Token::Ident(self.buffer.clone()))
     }
 }
 
@@ -107,6 +111,7 @@ impl<I: Iterator<Item = char>> Iterator for Lexer<I> {
     type Item = Token;
     fn next(&mut self) -> Option<Token> {
         let mut current_symbol;
+        self.buffer = String::new();
         if let Some(s) = self.input.peek() {
             current_symbol = *s;
         } else {
